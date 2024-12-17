@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catch the Food Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      display: block;
+      background: linear-gradient(to bottom, #1e3c72, #2a5298); /* Cooler blue gradient */
+      margin: 0 auto;
+      position: relative;
+      height: 600px;
+      overflow: hidden;
+    }
+    .food {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+    }
+    .player {
+      width: 120px;
+      height: 25px;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #4caf50;
+      border-radius: 10px;
+    }
+    #scoreBoard {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      color: #333;
+      font-weight: bold;
+      z-index: 999;
+      display: flex;
+      gap: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .score {
+      background: #fff;
+      padding: 10px 15px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    #startButton,
+    #restartButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+    }
+    #startButton:active,
+    #restartButton:active {
+      background-color: #218838;
+    }
+    #gameOverMessage {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 30px;
+      font-weight: bold;
+      color: #ff0000;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="scoreBoard">
+    <div class="score" id="caughtScore">Caught: 0</div>
+    <div class="score" id="droppedScore">Dropped: 0</div>
+  </div>
+  <div id="gameCanvas">
+    <div class="player"></div>
+    <button id="startButton">Start Game</button>
+    <button id="restartButton">Restart Game</button>
+    <div id="gameOverMessage">Game Over</div>
+  </div>
+
+  <script>
+    const gameCanvas = document.getElementById('gameCanvas');
+    const player = document.querySelector('.player');
+    const caughtScore = document.getElementById('caughtScore');
+    const droppedScore = document.getElementById('droppedScore');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const gameOverMessage = document.getElementById('gameOverMessage');
+
+    let caught = 0;
+    let dropped = 0;
+    const playerSpeed = 20;
+    const foodSpeed = 2; // Slightly faster falling speed
+    const foodSpawnInterval = 2000; // More spread-out food
+    let foodObjects = [];
+    let gameInterval = null;
+    let foodCreationInterval = null;
+
+    const foodImages = [
+      'https://img.icons8.com/emoji/48/hamburger-emoji.png',
+      'https://img.icons8.com/emoji/48/pizza-emoji.png',
+      'https://img.icons8.com/emoji/48/ice-cream-emoji.png',
+      'https://img.icons8.com/emoji/48/doughnut-emoji.png',
+      'https://img.icons8.com/emoji/48/banana-emoji.png',
+      'https://img.icons8.com/emoji/48/poultry-leg-emoji.png',
+    ];
+
+    function createFood() {
+      const food = document.createElement('img');
+      food.classList.add('food');
+      food.src = foodImages[Math.floor(Math.random() * foodImages.length)];
+      food.style.left = Math.random() * (gameCanvas.offsetWidth - 40) + 'px';
+      food.style.top = '0px';
+      gameCanvas.appendChild(food);
+      foodObjects.push(food);
+    }
+
+    function updateFood() {
+      for (let i = 0; i < foodObjects.length; i++) {
+        const food = foodObjects[i];
+        const foodTop = parseFloat(food.style.top);
+        food.style.top = foodTop + foodSpeed + 'px';
+
+        const playerRect = player.getBoundingClientRect();
+        const foodRect = food.getBoundingClientRect();
+
+        // Check if the food is caught
+        if (
+          foodRect.bottom >= playerRect.top &&
+          foodRect.left < playerRect.right &&
+          foodRect.right > playerRect.left
+        ) {
+          caught++;
+          caughtScore.textContent = `Caught: ${caught}`;
+          food.remove();
+          foodObjects.splice(i, 1);
+          i--;
+        }
+
+        // Remove food if it falls off the screen
+        if (foodTop > gameCanvas.offsetHeight) {
+          dropped++;
+          droppedScore.textContent = `Dropped: ${dropped}`;
+          food.remove();
+          foodObjects.splice(i, 1);
+          i--;
+        }
+
+        // Check for game over
+        if (dropped >= 5) {
+          endGame();
+          break;
+        }
+      }
+    }
+
+    function movePlayer(e) {
+      const playerLeft = parseFloat(player.style.left || gameCanvas.offsetWidth / 2 - player.offsetWidth / 2);
+      const canvasWidth = gameCanvas.offsetWidth;
+
+      if (e.key === 'ArrowLeft' && playerLeft > 0) {
+        player.style.left = Math.max(playerLeft - playerSpeed, 0) + 'px';
+      } else if (e.key === 'ArrowRight' && playerLeft + player.offsetWidth < canvasWidth) {
+        player.style.left = Math.min(playerLeft + playerSpeed, canvasWidth - player.offsetWidth) + 'px';
+      }
+    }
+
+    function startGame() {
+      resetGame();
+      player.style.left = (gameCanvas.offsetWidth / 2 - player.offsetWidth / 2) + 'px';
+
+      // Create food at intervals
+      foodCreationInterval = setInterval(createFood, foodSpawnInterval);
+
+      // Update falling food
+      gameInterval = setInterval(updateFood, 16); // 60 FPS
+
+      // Hide start button
+      startButton.style.display = 'none';
+    }
+
+    function resetGame() {
+      // Clear existing food
+      foodObjects.forEach(food => food.remove());
+      foodObjects = [];
+
+      // Reset scores
+      caught = 0;
+      dropped = 0;
+      caughtScore.textContent = `Caught: ${caught}`;
+      droppedScore.textContent = `Dropped: ${dropped}`;
+
+      // Stop any ongoing intervals
+      clearInterval(foodCreationInterval);
+      clearInterval(gameInterval);
+
+      // Hide game over message and restart button
+      gameOverMessage.style.display = 'none';
+      restartButton.style.display = 'none';
+    }
+
+    function endGame() {
+      clearInterval(foodCreationInterval);
+      clearInterval(gameInterval);
+
+      gameOverMessage.style.display = 'block';
+      restartButton.style.display = 'block';
+    }
+
+    function showStartButton() {
+      startButton.style.display = 'block';
+    }
+
+    // Start the game when the start button is clicked
+    startButton.addEventListener('click', startGame);
+
+    // Restart the game when the restart button is clicked
+    restartButton.addEventListener('click', startGame);
+
+    // Add keyboard controls
+    window.addEventListener('keydown', movePlayer);
+
+    // Show the start button when the page loads
+    showStartButton();
+  </script>
+</body>
+</html>

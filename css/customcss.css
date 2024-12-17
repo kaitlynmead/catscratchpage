@@ -1,0 +1,29 @@
+body {
+    background-color:snow;
+    color:darkslategray;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+h1,h2,h3,h4,h5,h6 {
+    color: blue;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    font-style: italic;
+}
+.main-content{
+    margin-left: 50px;
+    margin-right: 50px;
+    padding: 20px;
+}
+.navbar{
+    padding: 20px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    color:azure;
+    background-color: cadetblue;
+    background-image: url(https://static.vecteezy.com/system/resources/previews/008/469/184/non_2x/doodle-flowers-and-leaves-horizontal-wallpaper-cute-floral-summer-banner-botanical-backdrop-vector.jpg);
+    background-size: cover;
+    height: 100px;
+}
+.navbar a{
+    color:aliceblue;
+}
